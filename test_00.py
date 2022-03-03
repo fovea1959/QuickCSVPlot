@@ -21,12 +21,18 @@ with open('fixed_shooter_m_20220302-174807.csv', newline='') as csvfile:
 
 x = data['time']
 print(x)
-y = data['main.rpm.actual']
+y0 = data['main.rpm.actual']
+y1 = data['main.rpm.requested']
 
 #x = [ 0, 1, 2]
 #y = [0, 1, 2]
 
-plt.plot(x, y)
+min_x = int(min(x) - 1)
+max_x = int(max(x) + 1)
+print(min_x, max_x)
+plt.xticks(np.arange(min_x, max_x + 1, 1.0))
+xx = plt.plot(x, y0, y1)
+print(type(xx), xx)
 
 if False:
     ax = plt.gca()
@@ -47,4 +53,5 @@ else:
     print(min_x, max_x)
     plt.xticks(np.arange(min_x, max_x+1, 1.0))
 
+plt.legend(loc='lower right')
 plt.show()

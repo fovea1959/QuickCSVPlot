@@ -13,7 +13,7 @@ import quickplot_wx
 matplotlib.use('WXAgg')
 
 class PlotCanvasPanel(wx.Panel):
-    def __init__(self, parent, x, y):
+    def __init__(self, parent, x, yseries, yseries_labels):
         wx.Panel.__init__(self, parent)
         self.figure = Figure()
         self.axes = self.figure.add_subplot(111)
@@ -24,7 +24,8 @@ class PlotCanvasPanel(wx.Panel):
         self.toolbar.Realize()
 
         self.x = x
-        self.y = y
+        self.y = yseries
+        self.y_labels = yseries_labels
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
@@ -33,16 +34,23 @@ class PlotCanvasPanel(wx.Panel):
         self.Fit()
 
     def Draw(self):
-        self.axes.plot(self.x, self.y)
+        all_series = []
+        for y in self.y:
+            all_series.append(self.x)
+            all_series.append(y)
+        print(type(self.axes))
+        drawn = self.axes.plot(*all_series)
+        print(drawn)
+        self.axes.legend(drawn, self.y_labels, loc='lower right')
 
 
 class PlotFrame(wx.Frame):
-    def __init__(self, parent, title, x, y):
+    def __init__(self, parent, title, x, yseries, y_series_labels):
         wx.Frame.__init__(self, parent, -1,
                           title,
                           size=(620, 620))
         self.SetMinSize((620, 620))
-        self.panel = PlotCanvasPanel(self, x, y)
+        self.panel = PlotCanvasPanel(self, x, yseries, y_series_labels)
         self.panel.Draw()
 
 
@@ -112,7 +120,13 @@ class QuickPlotFrame(quickplot_wx.QuickplotFrame):
         event.Skip()
 
     def do_plot(self):
-        pf = PlotFrame(self, self.fn, self.data['time'], self.data['main.rpm.actual'])
+        y_series_labels = []
+        y_series = []
+        for cb in self.checkboxes.values():
+            if cb.IsChecked():
+                y_series.append(self.data[cb.GetLabel()])
+                y_series_labels.append(cb.GetLabel())
+        pf = PlotFrame(self, self.fn, self.data['time'], y_series, y_series_labels)
         pf.Show()
         self.plot_button.Enable(False)
 
