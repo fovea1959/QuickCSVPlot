@@ -8,6 +8,7 @@
 
 import numpy as np
 import wx
+import csv
 
 import matplotlib
 matplotlib.use('WXAgg')
@@ -17,19 +18,43 @@ from matplotlib.figure import Figure
 
 
 class MyFileDropTarget(wx.FileDropTarget):
-    def __init__(self, window):
+    def __init__(self, window, canvas_panel):
         wx.FileDropTarget.__init__(self)
         self.window = window
+        self.canvas_panel = canvas_panel
+        print('mydropwindow', window)
+        print('mydropwindow.canvaspanel', canvas_panel)
+
 
     def OnDropFiles(self, x, y, filenames):
         fig = self.window.figure
         inaxes = fig.get_axes()[0]
         h_pix = int(fig.get_figheight() * fig.get_dpi()) # fig height in pixels
         message = "%d file(s) dropped at (%d,%d):\n" % (len(filenames), x, y)
+        data = {}
         for file in filenames:
-            message += file + "\n"
+            with open(file, newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                labels = reader.fieldnames
+                for label in labels:
+                    data[label] = []
+                for row in reader:
+                    if row['time'] is not None and row['time'] != '':
+                        for label in labels:
+                            v = row[label]
+                            if v is not None:
+                                try:
+                                    v = float(v)
+                                except:
+                                    pass
+                            data[label].append(v)
+            break
+        print(data)
         inaxes.annotate(message, (x, h_pix-y), xycoords='figure pixels')
+        self.canvas_panel.setXY(data['time'], data['main.rpm.actual'])
+        self.canvas_panel.draw()
         self.window.draw()
+        return True
 
 class CanvasPanel(wx.Panel):
     def __init__(self, parent):
@@ -43,14 +68,29 @@ class CanvasPanel(wx.Panel):
         self.add_toolbar()
         self.Fit()
 
+        self.xseries = np.linspace(0.0, 6., 100)
+        self.yseries = np.sin(2 * np.pi * self.xseries)
+
         win_target = self.canvas
-        dt = MyFileDropTarget(win_target)
+        dt = MyFileDropTarget(win_target, self)
         win_target.SetDropTarget(dt)
 
+        print('canvaspanel', self)
+
+    def setXY(self, x, y):
+        self.xseries = x
+        self.yseries = y
+
     def draw(self):
-        t = np.linspace(0.0, 2., 100)
-        s = np.sin(2 * np.pi * t)
-        self.axes.plot(t, s)
+
+        print("axes", type(self.axes))
+        self.axes.clear()
+        min_x = int(min(self.xseries) - 1)
+        max_x = int(max(self.xseries) + 1)
+        self.axes.set_xticks(np.arange(min_x, max_x + 1, 1.0))
+        rv = self.axes.plot(self.xseries, self.yseries)
+        print(rv)
+        print(self.axes)
 
     def add_toolbar(self):
         self.toolbar = NavigationToolbar2Wx(self.canvas)
@@ -63,8 +103,8 @@ class CanvasPanel(wx.Panel):
         else:
             # On Windows platform, default window size is incorrect, so set
             # toolbar width to figure width.
-            tw, th = self.toolbar.GetSizeTuple()
-            fw, fh = self.canvas.GetSizeTuple()
+            tw, th = self.toolbar.GetSize()
+            fw, fh = self.canvas.GetSize()
             # By adding toolbar in sizer, we are able to put it at the bottom
             # of the frame - so appearance is closer to GTK version.
             # As noted above, doesn't work for Mac.
@@ -74,7 +114,7 @@ class CanvasPanel(wx.Panel):
         self.toolbar.update()
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     frame = wx.Frame(None, title='File drop test')
     panel = CanvasPanel(frame)
     panel.draw()
