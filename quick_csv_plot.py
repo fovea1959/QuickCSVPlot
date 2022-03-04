@@ -1,19 +1,18 @@
 import csv
 
-import numpy as np
-
 import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar2Wx
 import wx
 
-import quickplot_wx
+import quick_csv_plot_wx
 
 matplotlib.use('WXAgg')
 
+
 class PlotCanvasPanel(wx.Panel):
-    def __init__(self, parent, x, yseries, yseries_labels):
+    def __init__(self, parent, x, y_series, y_series_labels):
         wx.Panel.__init__(self, parent)
         self.figure = Figure()
         self.axes = self.figure.add_subplot(111)
@@ -24,8 +23,8 @@ class PlotCanvasPanel(wx.Panel):
         self.toolbar.Realize()
 
         self.x = x
-        self.y = yseries
-        self.y_labels = yseries_labels
+        self.y = y_series
+        self.y_labels = y_series_labels
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
@@ -33,41 +32,37 @@ class PlotCanvasPanel(wx.Panel):
         self.SetSizer(sizer)
         self.Fit()
 
+    # noinspection PyPep8Naming
     def Draw(self):
         all_series = []
         for y in self.y:
             all_series.append(self.x)
             all_series.append(y)
-        print(type(self.axes))
         drawn = self.axes.plot(*all_series)
-        print(drawn)
         self.axes.legend(drawn, self.y_labels, loc='lower right')
 
 
 class PlotFrame(wx.Frame):
-    def __init__(self, parent, title, x, yseries, y_series_labels):
+    def __init__(self, parent, title, x, y_series, y_series_labels):
         wx.Frame.__init__(self, parent, -1,
                           title,
                           size=(620, 620))
         self.SetMinSize((620, 620))
-        self.panel = PlotCanvasPanel(self, x, yseries, y_series_labels)
+        self.panel = PlotCanvasPanel(self, x, y_series, y_series_labels)
         self.panel.Draw()
 
 
 class MyFileDropTarget(wx.FileDropTarget):
     def __init__(self, window):
         wx.FileDropTarget.__init__(self)
-        self.window : QuickPlotFrame = window
+        self.window: QuickCSVPlotFrame = window
 
     def OnDropFiles(self, x, y, filenames):
-        message = f"{len(filenames)} file(s) dropped at ({x}, {y})"
-        print(message)
         self.window.handle_dropped_files(filenames)
         return True
 
 
-class QuickPlotFrame(quickplot_wx.QuickplotFrame):
-
+class QuickCSVPlotFrame(quick_csv_plot_wx.QuickCSVPlotFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self.checkboxes = {}
@@ -77,6 +72,7 @@ class QuickPlotFrame(quickplot_wx.QuickplotFrame):
         self.drop_target = MyFileDropTarget(self)
         self.SetDropTarget(self.drop_target)
 
+    # noinspection PyBroadException
     def handle_dropped_files(self, filenames):
         self.data.clear()
         self.fn = None
@@ -94,7 +90,7 @@ class QuickPlotFrame(quickplot_wx.QuickplotFrame):
                             if v is not None:
                                 try:
                                     v = float(v)
-                                except:
+                                except Exception:
                                     pass
                             self.data[label].append(v)
             break
@@ -128,12 +124,13 @@ class QuickPlotFrame(quickplot_wx.QuickplotFrame):
                 y_series_labels.append(cb.GetLabel())
         pf = PlotFrame(self, self.fn, self.data['time'], y_series, y_series_labels)
         pf.Show()
-        self.plot_button.Enable(False)
+        #self.plot_button.Enable(False)
+
 
 if __name__ == '__main__':
     app = wx.App()
 
-    frm1 = QuickPlotFrame(None)
+    frm1 = QuickCSVPlotFrame(None)
     frm1.Show()
 
     app.MainLoop()
