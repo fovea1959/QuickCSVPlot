@@ -120,8 +120,10 @@ class QuickCSVPlotFrame(quick_csv_plot_wx.QuickCSVPlotFrame):
         y_series = []
         for cb in self.checkboxes.values():
             if cb.IsChecked():
-                y_series.append(self.data[cb.GetLabel()])
-                y_series_labels.append(cb.GetLabel())
+                series = self.data.get(cb.GetLabel(), None)
+                if series is not None:
+                    y_series.append(self.data[cb.GetLabel()])
+                    y_series_labels.append(cb.GetLabel())
         pf = PlotFrame(self, self.fn, self.data['time'], y_series, y_series_labels)
         pf.Show()
         #self.plot_button.Enable(False)
